@@ -8,12 +8,12 @@ export const AuthContextProvider = ({children}) => {
     const [CurrentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem("user")) || null)
     
     const UserSignIn = async (UserInfo) => {
-        const res = await axios.post("http://localhost:5000/UserSignIn", UserInfo)
+        const res = await axios.post("http://localhost:5000/UserSignIn", UserInfo, { withCredentials: true })
         setCurrentUser(res.data)
     }
 
     const UserSignOut = async () => {
-        await axios.post("http://localhost:5000/UserSignOut", {})
+        await axios.post("http://localhost:5000/UserSignOut", {}, { withCredentials: true })
         setCurrentUser(null)
     }
 
