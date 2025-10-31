@@ -21,3 +21,8 @@ This is a simple vehicle booking system, where the Admin can register the vehicl
 2. Set up the MySQL Database using `.sql` file (which is in directory `/Online_Vehicle_Booking_Management_System/OVBMS/Database/ovbms.sql`)
 3. Do `npm install` in `server` directory, `admin` directory & `client` directory.
 4. Then `npm run` in all the directories mentioned.
+Admin
+veeresh123
+User
+user1@gmail.com
+user1
