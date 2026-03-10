@@ -119,6 +119,12 @@ OVBMS/
 - Move DB credentials into a `.env` file and use `dotenv` in `server/server.js`.
 - Add a server endpoint that returns joined booking+vehicle data to avoid multiple round trips from the client.
 
+## Interview Preparation
+
+See [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md) for a detailed project walkthrough
+written from an interview perspective — covers architecture, design decisions,
+database design, API endpoints, authentication flow, and common Q&A.
+
 ## License
 
 This repository is provided as-is for educational/demo purposes.
