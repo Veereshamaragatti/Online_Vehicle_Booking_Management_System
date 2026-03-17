@@ -64,7 +64,7 @@ customer ──< booking_requests >── vehicles ──> manager
 
 | Table | Primary Key | Purpose |
 |-------|------------|---------|
-| `customer` | `email` | Stores registered users (name, hashed password, license ID, mobile, DOB) |
+| `customer` | `email` | Stores registered users (name, hashed password, license ID, mobile, date of birth) |
 | `manager` | `email` | Stores admin/manager accounts (name, hashed password) |
 | `vehicles` | `license_no` | Vehicle inventory (name, model year, price/day, seats, fuel type, image URL, overview, availability status, owning manager) |
 | `booking_requests` | `request_id` (UUID) | Booking records linking customer → vehicle → manager, with dates, status, and action history |
