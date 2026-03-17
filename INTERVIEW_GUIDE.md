@@ -217,84 +217,523 @@ User requests booking          Admin approves
 
 ---
 
-## 10. Common Interview Questions & Answers
+## 10. Interview Questions & Answers
 
-### Q: Walk me through the project architecture.
+The questions below are grouped by topic and ordered from general to specific.
+Each answer is written in first person so you can use it directly.
 
-> "It is a three-tier application. The presentation layer has two React SPAs —
-> one for users and one for admins. Both talk to a single Express REST API on
-> port 5000 using Axios with credentials (cookies). The API layer handles
-> business logic and authentication via JWT middleware, then communicates with a
-> MySQL database that stores customers, managers, vehicles, and booking
-> requests."
+---
 
-### Q: How does authentication work?
+### 🔷 Project Overview
 
-> "When a user or admin logs in, the server verifies the password hash with
-> bcryptjs, generates a JWT, and sets it as an HTTP-only cookie. A middleware
-> function on protected routes reads the cookie, verifies the token, and
-> attaches the decoded user info to the request object. If the token is missing
-> or invalid, the middleware returns a 401 or 403 status."
+**Q1: Can you give a brief overview of the project?**
 
-### Q: How do you handle the booking workflow?
+> "This is an **Online Vehicle Booking Management System** — a full-stack web
+> application where users can browse a catalog of vehicles, select dates, and
+> submit booking requests. Admins manage the vehicle inventory and approve or
+> reject those requests. I built it with **React** on the frontend, **Express**
+> on the backend, and **MySQL** as the database. The system has two separate
+> React apps — one for users and one for admins — both talking to a single REST
+> API."
 
-> "When a user books a vehicle, the backend calls a MySQL stored procedure
-> `BookVehicle` that inserts a booking request with 'Pending' status and sets
-> the vehicle to 'Waiting'. An admin then reviews and approves or rejects the
-> request via another stored procedure `HandleBookingRequest`. A database
-> trigger automatically updates the vehicle's availability based on the
-> decision. A daily MySQL event auto-completes bookings whose rental period has
-> ended."
+**Q2: Walk me through the project architecture.**
 
-### Q: Why did you use stored procedures instead of handling everything in Express?
+> "It follows a **three-tier architecture**. The presentation layer has two
+> React single-page applications — the user app runs on port 3000 and the admin
+> app on port 4000. Both communicate with a single Express REST API on port
+> 5000 using Axios with `withCredentials: true` so cookies are sent
+> automatically. The API layer handles business logic, JWT-based
+> authentication, and talks to a MySQL database that stores customers, managers,
+> vehicles, and booking requests."
 
-> "Stored procedures group multiple SQL statements into a single atomic
-> operation. For example, booking a vehicle requires both inserting a request
-> and updating the vehicle status — if the app crashed between those two steps,
-> data would be inconsistent. By putting both in a stored procedure, I get
-> transactional safety at the database level."
+**Q3: Why did you choose this tech stack?**
 
-### Q: What would you improve if you had more time?
+> "I chose **React** because its component-based architecture and virtual DOM
+> make building interactive UIs efficient. **Express** is lightweight and
+> well-suited for REST APIs — it has a large middleware ecosystem. **MySQL** was
+> a good fit because the domain is clearly relational (customers book vehicles,
+> managers approve requests) and MySQL supports stored procedures, triggers, and
+> scheduled events, which I used to keep data consistent. For auth I used
+> **JWT** because it is stateless and scales well, and **bcryptjs** for secure
+> password hashing."
 
-> "First, I would move all secrets and credentials to environment variables
-> using dotenv. Second, I would add server-side input validation with a library
-> like Joi or express-validator. Third, I would add comprehensive tests —
-> currently there is basic test scaffolding but no test cases. Fourth, I would
-> modularize the backend into separate route files and a service layer. Finally,
-> I would add pagination for the vehicle listings and booking history."
+**Q4: What is the role of each part of the application?**
 
-### Q: How do you prevent one user from booking a vehicle that's already being reviewed?
+> "The **client React app** lets users sign up, sign in, browse available
+> vehicles, submit booking requests with date ranges, and view their booking
+> history. The **admin React app** lets managers log in, add/update/delete
+> vehicles, view a dashboard with statistics, and approve or reject pending
+> booking requests. The **Express server** exposes REST endpoints for both apps,
+> handles authentication middleware, and calls MySQL stored procedures. The
+> **MySQL database** stores all data and enforces business rules through
+> triggers and events."
 
-> "When a user submits a booking request, the stored procedure immediately sets
-> the vehicle's availability to 'Waiting'. The vehicle listings page only shows
+---
+
+### 🔷 React & Frontend
+
+**Q5: How did you structure the React frontend?**
+
+> "Each React app has a `components` folder with one file per feature —
+> `UserSignIn`, `UserSignUp`, `VehicleListings`, `VehicleBooking`,
+> `UserProfile`, and a `Navbar`. Routing is handled by **React Router v6** with
+> `BrowserRouter`, `Routes`, and `Route`. I use a custom `AuthContext` (via
+> React's Context API) to share authentication state across components, and a
+> `ProtectedUserRoute` wrapper that redirects unauthenticated users to the sign
+> in page."
+
+**Q6: Explain how you manage state in the React apps.**
+
+> "I use **React Context API** for global auth state — storing whether the user
+> is signed in, their email, and name. Each component manages its own local
+> state with the `useState` hook. For example, `VehicleListings` has local
+> state for the vehicle list and the user's active bookings. I chose Context
+> API over Redux because the app's state is simple enough that Redux would be
+> overkill."
+
+**Q7: How does the `ProtectedUserRoute` component work?**
+
+> "It reads the `isSignedIn` flag from the `AuthContext`. If the user is signed
+> in, it renders the child component. If not, it redirects to `/UserSignIn`
+> using React Router's `Navigate` component. The admin app has an equivalent
+> `ProtectedAdminRoute` that checks admin auth state. This pattern keeps route
+> protection declarative and reusable."
+
+**Q8: How do you make API calls from the frontend?**
+
+> "I use **Axios** with `withCredentials: true` on every request so the
+> browser automatically sends the JWT cookie. For example, when the user opens
+> the vehicle listings page, a `useEffect` hook calls
+> `axios.get('http://localhost:5000/VehicleListings')`. The response data is
+> stored in local state with `setVehicles`. Error handling shows an alert or
+> sets an error message in state."
+
+**Q9: How do you handle routing in the React apps?**
+
+> "I use **React Router v6**. In `App.js`, I wrap the app in `BrowserRouter`
+> and define routes with `Routes` and `Route`. Public routes like
+> `/VehicleListings` and `/UserSignIn` render directly. Protected routes like
+> `/UserProfile` and `/VehicleBooking/:id` are wrapped in
+> `ProtectedUserRoute`, which redirects to sign in if the user is not
+> authenticated."
+
+**Q10: How does the vehicle booking form work?**
+
+> "The `VehicleBooking` component takes a vehicle ID from the URL params using
+> `useParams()`. On mount, a `useEffect` fetches the vehicle details. The form
+> has two date inputs — `from_date` and `to_date` — with the minimum set to
+> today and the maximum to 7 days from now. On submit, it sends a POST request
+> to `/VehicleBooking/:id` with the dates. On success, it navigates the user
+> to their profile page to see the pending booking."
+
+**Q11: How does `VehicleListings` show a user's active bookings?**
+
+> "When the component mounts, if the user is signed in, it makes an additional
+> GET request to `/UserProfile` which returns the user's bookings. It then
+> filters for bookings with status 'Pending' or 'Approved' and extracts their
+> vehicle IDs. When rendering each vehicle card, it checks if that vehicle's
+> license number is in the active bookings set. If so, it shows a 'Booked'
+> badge instead of the 'Book Now' button."
+
+---
+
+### 🔷 Node.js & Express Backend
+
+**Q12: Describe the structure of your Express server.**
+
+> "The entire backend lives in a single `server.js` file. It sets up two
+> MySQL connections — one with limited privileges for client-facing queries and
+> one with admin privileges. It defines JWT authentication middleware for both
+> users and admins, then registers all the REST endpoints. I used a single-file
+> approach to keep things simple for this project size, but in production I
+> would split routes into separate modules."
+
+**Q13: How does the JWT authentication middleware work?**
+
+> "I have two middleware functions — `userAuthenticateToken` and
+> `adminAuthenticateToken`. Each reads the JWT from a cookie
+> (`access_token` for users, `admin_access_token` for admins), verifies it
+> with the corresponding secret key using `jsonwebtoken.verify()`, and attaches
+> the decoded payload to `req.user`. If the cookie is missing it returns 401;
+> if the token is invalid it returns 403. I apply this middleware to any route
+> that requires authentication."
+
+**Q14: Why do you have two separate database connections?**
+
+> "I have a `ClientDB` connection with a MySQL user that only has SELECT and
+> EXECUTE privileges, and an `AdminDB` connection with a user that has full
+> CRUD privileges. This follows the **principle of least privilege** — even if
+> there is a vulnerability in the user-facing code, the database user cannot
+> delete or modify records beyond what is exposed through stored procedures."
+
+**Q15: How does the UserSignUp endpoint work?**
+
+> "The POST `/UserSignUp` endpoint receives the user's name, email, password,
+> license number, mobile number, and date of birth. It first hashes the
+> password using `bcryptjs.hash()` with a salt rounds value of 10. Then it
+> inserts the user into the `customer` table. If the email already exists,
+> MySQL returns a duplicate key error which I catch and send back as a 409
+> Conflict response."
+
+**Q16: How does the UserSignIn endpoint work?**
+
+> "The POST `/UserSignIn` endpoint receives email and password. It queries the
+> `customer` table for that email. If no user is found, it returns 404. If
+> found, it compares the submitted password with the stored hash using
+> `bcryptjs.compare()`. On success, it generates a JWT containing the user's
+> email and name, sets it as an HTTP-only cookie with `res.cookie()`, and
+> returns the user info. The `httpOnly: true` flag ensures JavaScript cannot
+> read the cookie, protecting against XSS."
+
+**Q17: How do you handle CORS?**
+
+> "I use the `cors` middleware configured to allow requests from
+> `http://localhost:3000` (user app) and `http://localhost:4000` (admin app)
+> with `credentials: true` so cookies are included. Without this, the browser
+> would block cross-origin requests from the React apps to the Express API
+> running on a different port."
+
+**Q18: How does the booking approval/rejection endpoint work?**
+
+> "The POST `/BookingRequest/:requestId` endpoint receives the action
+> ('Approved' or 'Rejected') and the manager's email from the authenticated
+> admin. It calls the `HandleBookingRequest` stored procedure with the request
+> ID, action, and manager ID. The stored procedure updates the request status,
+> records who handled it and when. Then a database trigger fires and
+> automatically updates the vehicle's availability — 'Unavailable' if approved,
+> 'Available' if rejected."
+
+---
+
+### 🔷 MySQL & Database Design
+
+**Q19: Explain the database schema.**
+
+> "There are four tables. `customer` stores user accounts keyed by email, with
+> name, hashed password, license ID, mobile, and date of birth. `manager`
+> stores admin accounts keyed by email. `vehicles` stores the vehicle
+> inventory keyed by license number, including name, model year, price per day,
+> seating capacity, fuel type, image URL, overview text, the manager who added
+> it, and an availability status. `booking_requests` is the main transaction
+> table — it links a customer to a vehicle with date ranges, a UUID request ID,
+> status (Pending/Approved/Rejected/Completed), and which manager acted on it."
+
+**Q20: What are the foreign key relationships?**
+
+> "`vehicles.manager_id` references `manager.email` — tracking which admin
+> added each vehicle. `booking_requests.customer_id` references
+> `customer.email`, `booking_requests.vehicle_id` references
+> `vehicles.license_no`, and `booking_requests.manager_id` references
+> `manager.email` (the admin who approved or rejected). These foreign keys
+> enforce referential integrity so you cannot have a booking for a non-existent
+> vehicle or customer."
+
+**Q21: What stored procedures do you have and why?**
+
+> "I have two. `BookVehicle` takes a customer email, vehicle license number,
+> and from/to dates — it generates a UUID, inserts a booking request with
+> 'Pending' status, and sets the vehicle availability to 'Waiting' all in one
+> call. `HandleBookingRequest` takes a request ID, an action (Approved or
+> Rejected), and the manager's email — it updates the request status, records
+> the action type, manager, and timestamp. Using stored procedures ensures
+> these multi-step operations are atomic."
+
+**Q22: How does the database trigger work?**
+
+> "The `booking_requests_AFTER_UPDATE` trigger fires whenever a row in
+> `booking_requests` is updated. It checks the new `request_status` value: if
+> it is 'Rejected', it sets the corresponding vehicle's availability back to
+> 'Available'; if it is 'Approved', it sets it to 'Unavailable'. This keeps
+> vehicle availability in sync with booking decisions without relying on the
+> application layer."
+
+**Q23: What is the scheduled event and what does it do?**
+
+> "The `CheckCompletedBookings` event runs on a daily schedule. It finds all
+> bookings where the `to_date` has passed and the status is still 'Approved',
+> marks them as 'Completed', and sets the vehicle availability back to
+> 'Available'. This automates the end-of-rental process so vehicles become
+> bookable again without any manual admin action."
+
+**Q24: Why did you use UUIDs for booking request IDs?**
+
+> "UUIDs are globally unique and non-sequential. Sequential integer IDs would
+> let someone guess other booking IDs by incrementing — for example, if my
+> booking is #42, I could try to access #41 or #43. With UUIDs, the IDs are
+> random 128-bit values, making enumeration attacks impractical."
+
+**Q25: Why did you use email as the primary key for customer and manager?**
+
+> "Emails are naturally unique per user and are the login credential, so they
+> serve as a convenient primary key. It simplifies queries because I can join
+> on the email directly without needing a separate user ID column. The downside
+> is that if a user wants to change their email, it would require updating
+> every foreign key reference — in a production system I would use an
+> auto-increment or UUID primary key instead."
+
+---
+
+### 🔷 Authentication & Security
+
+**Q26: How does authentication work end to end?**
+
+> "When a user signs in, the server validates the email and password by
+> comparing the bcrypt hash. On success, it creates a JWT containing the user's
+> email and name, and sets it as an HTTP-only cookie. On every subsequent
+> request, the browser sends this cookie automatically. My authentication
+> middleware reads the cookie, verifies the JWT signature, and attaches the
+> decoded payload to the request object. If verification fails, it returns 401
+> or 403."
+
+**Q27: Why did you store the JWT in an HTTP-only cookie instead of localStorage?**
+
+> "HTTP-only cookies cannot be accessed by JavaScript, so even if an attacker
+> injects a malicious script (XSS attack), they cannot steal the token.
+> LocalStorage is vulnerable to XSS because any script on the page can read it.
+> Cookies are also sent automatically with every request, so I do not need to
+> manually attach the token to each Axios call."
+
+**Q28: How do you separate user and admin authentication?**
+
+> "I use two different JWT secrets — `userjwtkey` for users and `adminjwtkey`
+> for admins — and two different cookie names — `access_token` and
+> `admin_access_token`. Each set of routes has its own middleware that only
+> accepts the matching secret. This means a user's token cannot pass admin
+> middleware and vice versa. Even if someone intercepts a user token, they
+> cannot use it to access admin routes."
+
+**Q29: How does password hashing work in your system?**
+
+> "During sign-up, I hash the password with `bcryptjs.hash(password, 10)` —
+> the 10 is the salt rounds, meaning bcrypt performs 2^10 iterations of the
+> hashing algorithm. This makes brute-force attacks computationally expensive.
+> During sign-in, I use `bcryptjs.compare(inputPassword, storedHash)` which
+> extracts the salt from the stored hash and re-hashes the input to see if
+> they match."
+
+**Q30: What security improvements would you make?**
+
+> "First, move all secrets and database credentials to environment variables
+> using `dotenv`. Second, add input validation and sanitization with
+> `express-validator` to prevent SQL injection and XSS. Third, add rate
+> limiting with `express-rate-limit` to prevent brute-force login attempts.
+> Fourth, add CSRF protection since cookie-based auth is vulnerable to
+> cross-site request forgery. Fifth, set token expiration times on JWTs —
+> currently they do not expire."
+
+---
+
+### 🔷 REST API Design
+
+**Q31: How did you design your REST API?**
+
+> "I followed RESTful conventions — using HTTP methods to indicate the
+> operation: GET for reading data, POST for creating, PUT for updating, and
+> DELETE for removing. Each endpoint represents a resource — `/VehicleListings`
+> for the vehicle collection, `/VehicleBooking/:id` for a specific vehicle
+> booking, `/BookingRequest/:requestId` for a specific booking request. I use
+> appropriate status codes: 200 for success, 201 for created, 401/403 for auth
+> errors, 404 for not found, and 409 for conflicts like duplicate emails."
+
+**Q32: How do the user-facing and admin-facing APIs differ?**
+
+> "User endpoints (`/UserSignUp`, `/UserSignIn`, `/VehicleListings`,
+> `/VehicleBooking/:id`, `/UserProfile`) use the `ClientDB` connection with
+> limited database privileges. Admin endpoints (`/AdminLogin`, `/AddVehicle`,
+> `/UpdateVehicle/:id`, `/Admin/:id`, `/BookingRequest`) use the `AdminDB`
+> connection with full CRUD privileges. The middleware is also different —
+> user routes use `userAuthenticateToken` and admin routes use
+> `adminAuthenticateToken`."
+
+**Q33: How does the dashboard statistics endpoint work?**
+
+> "The GET `/AdminDashboard` endpoint runs three separate COUNT queries —
+> total users from `customer`, total vehicles from `vehicles`, and total
+> bookings from `booking_requests`. It returns a JSON object with
+> `total_users`, `total_vehicles`, and `total_bookings`. The admin dashboard
+> component displays these as summary cards at the top of the page."
+
+---
+
+### 🔷 Booking Workflow
+
+**Q34: Explain the complete booking lifecycle.**
+
+> "A booking goes through these states: First, the user selects a vehicle and
+> submits dates — the stored procedure creates a 'Pending' request and sets
+> the vehicle to 'Waiting'. Second, an admin reviews the request and either
+> approves or rejects it. If approved, a trigger sets the vehicle to
+> 'Unavailable'. If rejected, the trigger sets it back to 'Available'. Third,
+> when the rental period ends (the `to_date` passes), a daily MySQL event
+> automatically marks the booking as 'Completed' and makes the vehicle
+> 'Available' again."
+
+**Q35: How do you prevent double-booking of a vehicle?**
+
+> "When a user submits a booking, the stored procedure immediately changes the
+> vehicle's availability to 'Waiting'. The vehicle listings page only shows
 > vehicles with 'Available' status, so other users will not see or be able to
-> book a vehicle that is pending review."
+> select a vehicle that is already being reviewed. This effectively prevents
+> double-booking at the application level."
 
-### Q: How is the admin portal secured from regular users?
+**Q36: What happens if an admin rejects a booking?**
 
-> "The admin portal uses a separate JWT secret (`adminjwtkey`) and stores its
-> token in a different cookie (`admin_access_token`). The admin routes have
-> their own authentication middleware that only accepts admin tokens. Even if a
-> regular user tries to call an admin endpoint, the token verification will fail
-> because the secrets are different."
+> "When an admin clicks reject, the frontend sends a POST to
+> `/BookingRequest/:requestId` with action 'Rejected'. The server calls the
+> `HandleBookingRequest` stored procedure, which updates the request status to
+> 'Rejected' and records the manager's email and timestamp. The
+> `booking_requests_AFTER_UPDATE` trigger then fires and sets the vehicle's
+> availability back to 'Available', so other users can book it."
 
-### Q: Explain the database schema.
+**Q37: Why did you limit the booking duration to 7 days?**
 
-> "There are four tables: `customer` for user accounts, `manager` for admin
-> accounts, `vehicles` for the vehicle inventory, and `booking_requests` for
-> booking records. The `booking_requests` table links customers, vehicles, and
-> managers through foreign keys. I also have a trigger that updates vehicle
-> availability when booking status changes, and a scheduled event that
-> auto-completes expired bookings."
+> "The booking form sets the `max` attribute on the date inputs to 7 days from
+> today. This is a business rule to keep the fleet available for more users and
+> prevent long-term holds on vehicles. In a real system, this limit could be
+> configurable per vehicle type or user tier."
 
-### Q: What challenges did you face?
+---
 
-> "One challenge was keeping vehicle availability in sync with booking status.
-> Initially I handled this in Express, but if a request failed mid-update, the
-> vehicle could end up in a wrong state. Moving to stored procedures and
-> triggers solved this. Another challenge was managing authentication across two
-> separate React apps talking to the same API — I solved it with separate JWT
-> secrets and cookie names for users and admins."
+### 🔷 Error Handling & Edge Cases
+
+**Q38: How do you handle errors in the application?**
+
+> "On the backend, each endpoint has a try-catch or callback error check. For
+> example, if a database query fails, I return a 500 status with an error
+> message. For specific cases like duplicate email on sign-up, I return 409. On
+> the frontend, Axios errors are caught in `.catch()` blocks and displayed to
+> the user via alert or by setting an error state variable that renders an
+> error message in the UI."
+
+**Q39: What happens if the database is down?**
+
+> "If the MySQL connection fails, the Express server logs the connection error
+> at startup. Subsequent API calls that try to query the database will receive
+> an error in the callback, and the server returns a 500 status to the client.
+> The React app displays an error message. To improve this, I would add a
+> health check endpoint, connection retry logic, and connection pooling instead
+> of a single persistent connection."
+
+**Q40: How do you handle a user trying to access a protected page without signing in?**
+
+> "The `ProtectedUserRoute` component checks the `isSignedIn` value from the
+> auth context. If the user is not signed in, it uses React Router's
+> `Navigate` component to redirect them to `/UserSignIn`. The same pattern
+> exists for admin routes with `ProtectedAdminRoute` redirecting to
+> `/AdminLogin`."
+
+---
+
+### 🔷 Scalability & Improvements
+
+**Q41: What would you improve if you had more time?**
+
+> "First, move all secrets and credentials to environment variables using
+> `dotenv`. Second, add server-side input validation with `express-validator`.
+> Third, write comprehensive unit and integration tests. Fourth, modularize the
+> backend into separate route files, controllers, and a service layer. Fifth,
+> add pagination for vehicle listings and booking history. Sixth, implement
+> connection pooling in MySQL instead of single connections. Seventh, add image
+> upload support instead of storing image URLs."
+
+**Q42: How would you scale this application for production?**
+
+> "First, I would containerize each service with Docker and use a reverse proxy
+> like Nginx to serve the React builds and proxy API requests. Second, I would
+> switch to MySQL connection pooling. Third, I would add Redis for session
+> caching and rate limiting. Fourth, I would split the Express server into
+> microservices or at least modular route files. Fifth, I would deploy the
+> React apps as static builds behind a CDN. Sixth, I would add proper logging
+> with Winston and monitoring with tools like Prometheus and Grafana."
+
+**Q43: How would you add role-based access control (RBAC)?**
+
+> "Currently I have two roles — user and admin — separated by different JWT
+> secrets and middleware. To add more granular RBAC, I would add a `roles`
+> table and a `user_roles` junction table in the database. The JWT payload
+> would include the user's role. The middleware would check if the user's role
+> has permission for the requested resource. This way I could add roles like
+> 'fleet manager', 'regional admin', or 'super admin' without changing the
+> auth flow."
+
+**Q44: How would you add real-time notifications?**
+
+> "I would use **WebSockets** with a library like Socket.io. When an admin
+> approves or rejects a booking, the server would emit an event to the user's
+> socket connection. On the React side, I would listen for that event and
+> display a notification toast. This would give users instant feedback instead
+> of having to refresh their profile page."
+
+---
+
+### 🔷 Challenges & Learnings
+
+**Q45: What challenges did you face during development?**
+
+> "The biggest challenge was keeping vehicle availability in sync with booking
+> status. Initially, I handled both the booking insert and the vehicle status
+> update in separate Express queries. If the server crashed between those two
+> queries, the data would be inconsistent. I solved this by moving the logic
+> into MySQL stored procedures and triggers, which guarantee atomicity.
+> Another challenge was managing authentication across two separate React apps
+> talking to the same API — I solved it by using separate JWT secrets and
+> cookie names."
+
+**Q46: What did you learn from building this project?**
+
+> "I learned the importance of pushing business logic to the database layer
+> when data consistency is critical — triggers and stored procedures are
+> powerful tools for this. I also deepened my understanding of JWT-based
+> authentication and the security tradeoffs between cookie and localStorage
+> storage. On the React side, I got comfortable with the Context API for
+> global state management and React Router v6's new API for route protection."
+
+**Q47: If you were to start over, what would you do differently?**
+
+> "I would set up the project with TypeScript for type safety on both frontend
+> and backend. I would use environment variables from day one instead of
+> hardcoding secrets. I would structure the Express server with a proper MVC
+> pattern — separate route, controller, and model files. And I would write
+> tests alongside the features rather than leaving them for later."
+
+---
+
+### 🔷 Code-Specific Deep Dives
+
+**Q48: Explain how the `AuthContext` works in the client app.**
+
+> "The `AuthContext` is a React context created with `createContext()`. The
+> `AuthProvider` component wraps the app and provides a `value` object
+> containing `isSignedIn`, `userEmail`, `userName`, a `UserSignIn` function,
+> and a `UserSignOut` function. The `UserSignIn` function sends a POST to
+> `/UserSignIn`, and on success sets the state and saves to localStorage so
+> the session persists across page refreshes. Child components access these
+> values via the `useContext(AuthContext)` hook."
+
+**Q49: How does the admin `BookingRequest` component render the dashboard?**
+
+> "The component has two `useEffect` hooks — one fetches dashboard stats from
+> `/AdminDashboard` (total users, vehicles, bookings) and another fetches all
+> booking requests from `/BookingRequest`. It renders three stat cards at the
+> top showing the counts, then a table of booking requests with columns for
+> request ID, customer email, vehicle name, dates, status, and action buttons.
+> Pending requests show 'Approve' and 'Reject' buttons. Each row is
+> color-coded by status: green for Approved, red for Rejected, yellow for
+> Pending, and gray for Completed."
+
+**Q50: Walk me through what happens when a user clicks 'Book Now'.**
+
+> "First, the user clicks 'Book Now' on a vehicle card in `VehicleListings`,
+> which navigates to `/VehicleBooking/:license_no`. The `VehicleBooking`
+> component extracts the ID from the URL with `useParams()`, fetches the
+> vehicle details via GET `/VehicleBooking/:id`, and displays them with a date
+> form. The user picks dates and clicks submit. The component sends a POST to
+> `/VehicleBooking/:id` with `from_date` and `to_date`. The server's endpoint
+> reads the authenticated user's email from the JWT, then calls the
+> `BookVehicle` stored procedure with the customer email, vehicle license
+> number, and dates. The procedure inserts a booking request and sets the
+> vehicle to 'Waiting'. The server returns success, and the component
+> navigates to `/UserProfile` where the user can see the pending booking."
 
 ---
 
